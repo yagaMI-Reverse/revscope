@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: revscope-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: revscope
+      POSTGRES_PASSWORD: revscope
+      POSTGRES_DB: revscope
+    # modest single-node tuning; no volume on purpose (throwaway bench database)
+    command: postgres -c shared_buffers=256MB -c work_mem=32MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U revscope -d revscope"]
+      interval: 2s
+      timeout: 2s
+      retries: 30

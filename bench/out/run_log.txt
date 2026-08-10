@@ -1,0 +1,80 @@
+﻿[1/7] full_backfill: fresh db, full stream
+processed 10000 / 648191
+processed 20000 / 648191
+processed 30000 / 648191
+processed 40000 / 648191
+processed 50000 / 648191
+processed 60000 / 648191
+processed 70000 / 648191
+processed 80000 / 648191
+processed 90000 / 648191
+processed 100000 / 648191
+processed 110000 / 648191
+processed 120000 / 648191
+processed 130000 / 648191
+processed 140000 / 648191
+processed 150000 / 648191
+processed 160000 / 648191
+processed 170000 / 648191
+processed 180000 / 648191
+processed 190000 / 648191
+processed 200000 / 648191
+processed 210000 / 648191
+processed 220000 / 648191
+processed 230000 / 648191
+processed 240000 / 648191
+processed 250000 / 648191
+processed 260000 / 648191
+processed 270000 / 648191
+processed 280000 / 648191
+processed 290000 / 648191
+processed 300000 / 648191
+processed 310000 / 648191
+processed 320000 / 648191
+processed 330000 / 648191
+processed 340000 / 648191
+processed 350000 / 648191
+processed 360000 / 648191
+processed 370000 / 648191
+processed 380000 / 648191
+processed 390000 / 648191
+processed 400000 / 648191
+processed 410000 / 648191
+processed 420000 / 648191
+processed 430000 / 648191
+processed 440000 / 648191
+processed 450000 / 648191
+processed 460000 / 648191
+processed 470000 / 648191
+processed 480000 / 648191
+processed 490000 / 648191
+processed 500000 / 648191
+processed 510000 / 648191
+processed 520000 / 648191
+processed 530000 / 648191
+processed 540000 / 648191
+processed 550000 / 648191
+processed 560000 / 648191
+processed 570000 / 648191
+processed 580000 / 648191
+processed 590000 / 648191
+processed 600000 / 648191
+processed 610000 / 648191
+processed 620000 / 648191
+processed 630000 / 648191
+processed 640000 / 648191
+backfill done: 648191 events in 138.4s (4683 events/sec), newly inserted 648191
+[2/7] first_report: dashboard from rollups, 20 runs
+[4/7] duplicate_storm: replay 50000 processed events
+[6/7] segmentation: RFM over customer_stats, 20 runs
+[7/7] reconciliation: raw vs rollups, 60 months
+[3/7] progressive: fresh db, last 90 days only
+[5/7] kill_resume: kill backfill at ~40%, resume, verify cents
+bench complete in 5.0 min: 7/7 PASS, results in bench/out/results.md
+  1. full_backfill: PASS (138s, 4683 ev/s, all counts exact)
+  2. first_report: PASS (p50 13.6 ms / p95 15.2 ms, all numbers exact)
+  3. progressive: PASS (correct 30d/90d report 17.3s after empty db)
+  4. duplicate_storm: PASS (50k dups -> 0 extra rows, checksums identical)
+  5. kill_resume: PASS (killed at 40%, final drift 0 cents)
+  6. segmentation: PASS (p50 119.0 ms over 60460 customers)
+  7. reconciliation: PASS (60 months, max drift 0 cents)
