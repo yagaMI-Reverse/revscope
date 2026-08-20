@@ -24,10 +24,16 @@ import urllib.request
 from datetime import datetime, timezone
 from http.server import ThreadingHTTPServer
 
-import product
-from bench.run_all import GT, p50_p95, q, usd, write_results
-
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Корень проекта в пути — иначе `python bench/run_product.py` падает на
+# `No module named 'product'`: скрипт лежит в подпапке, и Python кладёт в sys.path
+# именно её, а не корень репозитория.
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+import product  # noqa: E402
+from bench.run_all import GT, p50_p95, q, usd, write_results  # noqa: E402
+
 OUT_PATH = os.path.join(ROOT, "bench", "out", "product_results.md")
 
 KEEP = [int(k) for k in GT["retention"]["keep_periods"]]

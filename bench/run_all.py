@@ -21,6 +21,10 @@ from datetime import datetime, timedelta, timezone
 
 import psycopg
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:          # запуск как `python bench/run_all.py` из корня
+    sys.path.insert(0, ROOT)
+
 import ingest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

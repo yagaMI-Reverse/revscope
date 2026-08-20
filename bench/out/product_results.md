@@ -1,16 +1,16 @@
 # revscope product bench results
 
-- run at: 2026-08-20 19:35 UTC
+- run at: 2026-08-20 19:53 UTC
 - postgres: PostgreSQL 16.14
 - python: 3.12.7, psycopg 3.3.4
-- dataset: 500000 charges over 10 countries / 7 currencies, 1827 days of rates, 60 months; marts rebuilt in 5.0s (0.7s revenue, 3.0s cohorts, 1.2s funnel)
+- dataset: 500000 charges over 10 countries / 7 currencies, 1827 days of rates, 60 months; marts rebuilt in 4.7s (0.7s revenue, 2.8s cohorts, 1.2s funnel)
 
 | # | bench | measured | verdict |
 |---|-------|----------|---------|
 | 8 | cohort_retention | 240 cells, 0 mismatches, M12 34.2% | PASS |
 | 9 | funnel | 0 mismatches, worst drop 38.0% at paid_twice | PASS |
 | 10 | fx_reporting | -0.91% (-454,312.40 USD) if converted at today's rate | PASS |
-| 11 | product_dashboard | p50 15.4 ms over HTTP, 10.1 ms in-process | PASS |
+| 11 | product_dashboard | p50 14.6 ms over HTTP, 10.1 ms in-process | PASS |
 
 ## 8. cohort_retention
 
@@ -77,9 +77,9 @@
 **measured:**
 
 - page = 4 queries (summary, revenue, funnel, cohorts), all of them against the three marts: 13040 rows total, versus 500000 charges the marts were built from (38x fewer rows to read)
-- unfiltered page over all 10 countries and 60 months: p50 10.1 ms, p95 12.6 ms over 20 runs
-- filtered page (country=KZ, 2024-01..2024-12): p50 5.0 ms, p95 6.3 ms over 20 runs
-- end to end over HTTP, the four endpoints the browser actually calls: p50 15.4 ms, p95 22.2 ms over 20 runs (of which 10.8 ms is SQL); the page itself is 18804 bytes with no external requests at all
+- unfiltered page over all 10 countries and 60 months: p50 10.1 ms, p95 12.4 ms over 20 runs
+- filtered page (country=KZ, 2024-01..2024-12): p50 4.2 ms, p95 5.0 ms over 20 runs
+- end to end over HTTP, the four endpoints the browser actually calls: p50 14.6 ms, p95 16.9 ms over 20 runs (of which 10.2 ms is SQL); the page itself is 18804 bytes with no external requests at all
 - filter actually cuts the data: 12 months, 1 country, gross 975,244.00 USD (97524400 cents) vs 49,694,286.85 USD (4969428685 cents) unfiltered -> ok
 - unfiltered page totals equal generator ground truth: ok
 - headline numbers the page shows: retention M2 37.6%, M12 34.2%, worst funnel step paid_twice -38.0%, FX gap -0.91%
