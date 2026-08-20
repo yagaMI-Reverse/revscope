@@ -1,0 +1,80 @@
+{"t": 0.437, "line": "[1/7] full_backfill: fresh db, full stream"}
+{"t": 3.406, "line": "processed 10000 / 648191"}
+{"t": 5.984, "line": "processed 20000 / 648191"}
+{"t": 8.5, "line": "processed 30000 / 648191"}
+{"t": 11.062, "line": "processed 40000 / 648191"}
+{"t": 13.625, "line": "processed 50000 / 648191"}
+{"t": 16.297, "line": "processed 60000 / 648191"}
+{"t": 18.859, "line": "processed 70000 / 648191"}
+{"t": 21.406, "line": "processed 80000 / 648191"}
+{"t": 23.953, "line": "processed 90000 / 648191"}
+{"t": 26.437, "line": "processed 100000 / 648191"}
+{"t": 29.093, "line": "processed 110000 / 648191"}
+{"t": 31.625, "line": "processed 120000 / 648191"}
+{"t": 34.109, "line": "processed 130000 / 648191"}
+{"t": 36.593, "line": "processed 140000 / 648191"}
+{"t": 39.187, "line": "processed 150000 / 648191"}
+{"t": 41.656, "line": "processed 160000 / 648191"}
+{"t": 44.281, "line": "processed 170000 / 648191"}
+{"t": 46.937, "line": "processed 180000 / 648191"}
+{"t": 49.656, "line": "processed 190000 / 648191"}
+{"t": 52.156, "line": "processed 200000 / 648191"}
+{"t": 55.015, "line": "processed 210000 / 648191"}
+{"t": 57.687, "line": "processed 220000 / 648191"}
+{"t": 60.172, "line": "processed 230000 / 648191"}
+{"t": 62.64, "line": "processed 240000 / 648191"}
+{"t": 65.547, "line": "processed 250000 / 648191"}
+{"t": 68.312, "line": "processed 260000 / 648191"}
+{"t": 70.875, "line": "processed 270000 / 648191"}
+{"t": 73.343, "line": "processed 280000 / 648191"}
+{"t": 75.875, "line": "processed 290000 / 648191"}
+{"t": 78.39, "line": "processed 300000 / 648191"}
+{"t": 80.89, "line": "processed 310000 / 648191"}
+{"t": 83.281, "line": "processed 320000 / 648191"}
+{"t": 85.797, "line": "processed 330000 / 648191"}
+{"t": 88.312, "line": "processed 340000 / 648191"}
+{"t": 90.765, "line": "processed 350000 / 648191"}
+{"t": 93.203, "line": "processed 360000 / 648191"}
+{"t": 95.672, "line": "processed 370000 / 648191"}
+{"t": 98.203, "line": "processed 380000 / 648191"}
+{"t": 100.703, "line": "processed 390000 / 648191"}
+{"t": 103.172, "line": "processed 400000 / 648191"}
+{"t": 105.765, "line": "processed 410000 / 648191"}
+{"t": 108.265, "line": "processed 420000 / 648191"}
+{"t": 110.734, "line": "processed 430000 / 648191"}
+{"t": 113.187, "line": "processed 440000 / 648191"}
+{"t": 115.64, "line": "processed 450000 / 648191"}
+{"t": 118.109, "line": "processed 460000 / 648191"}
+{"t": 120.718, "line": "processed 470000 / 648191"}
+{"t": 123.234, "line": "processed 480000 / 648191"}
+{"t": 125.812, "line": "processed 490000 / 648191"}
+{"t": 128.343, "line": "processed 500000 / 648191"}
+{"t": 130.812, "line": "processed 510000 / 648191"}
+{"t": 133.312, "line": "processed 520000 / 648191"}
+{"t": 136.047, "line": "processed 530000 / 648191"}
+{"t": 138.656, "line": "processed 540000 / 648191"}
+{"t": 141.156, "line": "processed 550000 / 648191"}
+{"t": 143.672, "line": "processed 560000 / 648191"}
+{"t": 146.25, "line": "processed 570000 / 648191"}
+{"t": 148.765, "line": "processed 580000 / 648191"}
+{"t": 151.281, "line": "processed 590000 / 648191"}
+{"t": 153.718, "line": "processed 600000 / 648191"}
+{"t": 156.125, "line": "processed 610000 / 648191"}
+{"t": 158.484, "line": "processed 620000 / 648191"}
+{"t": 160.937, "line": "processed 630000 / 648191"}
+{"t": 163.343, "line": "processed 640000 / 648191"}
+{"t": 165.172, "line": "backfill done: 648191 events in 164.3s (3945 events/sec), newly inserted 648191"}
+{"t": 165.406, "line": "[2/7] first_report: dashboard from rollups, 20 runs"}
+{"t": 165.859, "line": "[4/7] duplicate_storm: replay 50000 processed events"}
+{"t": 168.515, "line": "[6/7] segmentation: RFM over customer_stats, 20 runs"}
+{"t": 171.656, "line": "[7/7] reconciliation: raw vs rollups, 60 months"}
+{"t": 171.89, "line": "[3/7] progressive: fresh db, last 90 days only"}
+{"t": 192.437, "line": "[5/7] kill_resume: kill backfill at ~40%, resume, verify cents"}
+{"t": 357.047, "line": "bench complete in 5.9 min: 7/7 PASS, results in bench/out/results.md"}
+{"t": 357.047, "line": "  1. full_backfill: PASS (164s, 3945 ev/s, all counts exact)"}
+{"t": 357.047, "line": "  2. first_report: PASS (p50 20.4 ms / p95 29.5 ms, all numbers exact)"}
+{"t": 357.047, "line": "  3. progressive: PASS (correct 30d/90d report 20.3s after empty db)"}
+{"t": 357.047, "line": "  4. duplicate_storm: PASS (50k dups -> 0 extra rows, checksums identical)"}
+{"t": 357.047, "line": "  5. kill_resume: PASS (killed at 40%, final drift 0 cents)"}
+{"t": 357.047, "line": "  6. segmentation: PASS (p50 148.9 ms over 60460 customers)"}
+{"t": 357.047, "line": "  7. reconciliation: PASS (60 months, max drift 0 cents)"}

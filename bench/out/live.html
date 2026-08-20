@@ -1,0 +1,62 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0c0c0c;font-family:Consolas,'Courier New',monospace;color:#ccc;height:100vh;overflow:hidden}
+.win{height:100vh;display:flex;flex-direction:column}
+.title{background:#1f1f1f;color:#ddd;font-size:13px;padding:7px 12px;display:flex;gap:10px;align-items:center;
+  border-bottom:1px solid #333}
+.title .dot{width:10px;height:10px;border-radius:50%;background:#3a3a3a}
+.clock{margin-left:auto;color:#7a7a7a;font-variant-numeric:tabular-nums}
+.body{flex:1;padding:10px 14px;font-size:14px;line-height:1.45;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.l{color:#cccccc}
+.bulk{color:#767676}
+.step{color:#3b8eea}
+.pass{color:#23d18b}
+.done{color:#23d18b;font-weight:bold}
+.cmd{color:#e5e510}
+.cursor{display:inline-block;width:8px;height:15px;background:#ccc;vertical-align:-3px;animation:b 1s step-end infinite}
+@keyframes b{50%{opacity:0}}
+</style></head><body>
+<div class="win">
+  <div class="title"><span class="dot"></span><span>Windows PowerShell — revscope</span><span class="clock" id="clk">00:00</span></div>
+  <div class="body" id="b"></div>
+</div>
+<script>
+const b = document.getElementById('b');
+const clk = document.getElementById('clk');
+const cur = document.createElement('span'); cur.className='cursor';
+b.appendChild(cur);   // курсор должен быть в DOM до первого insertBefore
+function add(text, cls){
+  const d = document.createElement('div');
+  d.className = 'l ' + (cls||'');
+  d.textContent = text;
+  if (cur.parentNode === b) b.insertBefore(d, cur); else b.appendChild(d);
+  while (b.scrollHeight > b.clientHeight && b.firstChild !== cur) b.removeChild(b.firstChild);
+}
+window.onerror = function(m){ document.title = 'JS ERROR: ' + m; };
+add('PS C:\\Users\\Ilay\\test\\revscope> python -u -m bench.run_all', 'cmd');
+function cls(s){
+  if (/^processed /.test(s)) return 'bulk';
+  if (/^\[\d\/7\]/.test(s)) return 'step';
+  if (/PASS/.test(s)) return 'pass';
+  if (/^bench complete/.test(s)) return 'done';
+  return '';
+}
+let shown = 0;
+const t0 = Date.now();
+setInterval(() => {
+  const s = Math.floor((Date.now()-t0)/1000);
+  clk.textContent = String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}, 500);
+async function poll(){
+  try{
+    const r = await fetch('live.log?ts=' + Date.now(), {cache:'no-store'});
+    const txt = await r.text();
+    const lines = txt.split('\n');
+    for (let i = shown; i < lines.length - 1; i++) add(lines[i], cls(lines[i]));
+    if (lines.length - 1 > shown) shown = lines.length - 1;
+    if (/bench complete/.test(txt)) window.__finished = true;
+  }catch(e){}
+  setTimeout(poll, 250);
+}
+poll();
+</script></body></html>
