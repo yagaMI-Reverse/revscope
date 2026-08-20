@@ -1,18 +1,18 @@
 # revscope bench results
 
-- run at: 2026-08-11 03:28 UTC
+- run at: 2026-08-20 19:29 UTC
 - postgres: PostgreSQL 16.14
 - python: 3.12.7, psycopg 3.3.4
 - dataset: 648191 events: 100000 customers, 25000 subscriptions, 500000 charges (430000 invoices + 70000 one-off), 23191 refunds, 60 months
 
 | # | bench | measured | verdict |
 |---|-------|----------|---------|
-| 1 | full_backfill | 146s, 4453 ev/s, all counts exact | PASS |
-| 2 | first_report | p50 15.1 ms / p95 18.7 ms, all numbers exact | PASS |
-| 3 | progressive | correct 30d/90d report 18.0s after empty db | PASS |
+| 1 | full_backfill | 131s, 4953 ev/s, all counts exact | PASS |
+| 2 | first_report | p50 15.3 ms / p95 18.6 ms, all numbers exact | PASS |
+| 3 | progressive | correct 30d/90d report 16.5s after empty db | PASS |
 | 4 | duplicate_storm | 50k dups -> 0 extra rows, checksums identical | PASS |
 | 5 | kill_resume | killed at 40%, final drift 0 cents | PASS |
-| 6 | segmentation | p50 125.8 ms over 60460 customers | PASS |
+| 6 | segmentation | p50 125.5 ms over 60460 customers | PASS |
 | 7 | reconciliation | 60 months, max drift 0 cents | PASS |
 
 ## 1. full_backfill
@@ -21,7 +21,7 @@
 
 **measured:**
 
-- wall time: 145.6s for 648191 events (4453 events/sec, pages of 100, commit + checkpoint per page)
+- wall time: 130.9s for 648191 events (4953 events/sec, pages of 100, commit + checkpoint per page)
 - raw_events: 648191 (expected 648191) -> ok
 - customers: 100000 (expected 100000) -> ok
 - subscriptions: 25000 (expected 25000) -> ok
@@ -42,7 +42,7 @@
 **measured:**
 
 - dashboard = 4 queries (MRR, last-30d revenue, all-time refund rate, recoverable failed $), rollups + subscriptions only
-- latency over 20 runs: p50 15.1 ms, p95 18.7 ms on the full 500k-charge dataset
+- latency over 20 runs: p50 15.3 ms, p95 18.6 ms on the full 500k-charge dataset
 - refund rate: 4.20%
 - MRR (active subscriptions): 1,851,495.00 USD (185149500 cents) == ground truth -> ok
 - last-30d gross: 2,621,014.00 USD (262101400 cents) == ground truth -> ok
@@ -62,7 +62,7 @@
 **measured:**
 
 - loaded 82603 events (everything created in the last 90 days; the stream is newest-first, so this is a file prefix)
-- time-to-first-correct-report: 18.0s from an empty database (vs full backfill of the whole history)
+- time-to-first-correct-report: 16.5s from an empty database (vs full backfill of the whole history)
 - last-30d gross/refunded/net: 262101400/16191342/245910058 cents == ground truth -> ok
 - last-90d gross/refunded/net: 695549500/33668214/661881286 cents == ground truth -> ok
 
@@ -74,7 +74,7 @@
 
 **measured:**
 
-- replayed 50000 random already-processed events through the same apply path in 1.4s (35356 events/sec)
+- replayed 50000 random already-processed events through the same apply path in 1.5s (33577 events/sec)
 - newly inserted rows: 0 (expected 0)
 - extra rows per table: {'raw_events': 0, 'customers': 0, 'subscriptions': 0, 'charges': 0, 'refunds': 0, 'metadata_review': 0, 'rollup_daily': 0, 'customer_stats': 0} (all expected 0)
 - rollup_daily md5 before == after: True (4f59286cfdafee086324c55c1c3ccfdb)
@@ -88,8 +88,8 @@
 
 **measured:**
 
-- killed worker (TerminateProcess) at checkpoint 259600 / 648191 events (40.0%)
-- restart resumed from checkpoint 259600 and finished the remaining 388591 events in 86.9s
+- killed worker (TerminateProcess) at checkpoint 260700 / 648191 events (40.2%)
+- restart resumed from checkpoint 260700 and finished the remaining 387491 events in 82.6s
 - raw_events: 648191 (expected 648191), charges: 500000, refunds: 23191 -> no loss, no duplicates
 - monthly gross/refund totals vs ground truth over 60 months: max drift 0 cents
 
@@ -102,7 +102,7 @@
 **measured:**
 
 - RFM = NTILE(5) window functions over recency/frequency/monetary on customer_stats (one row per customer), 60460 paying customers
-- latency over 20 runs: p50 125.8 ms, p95 158.4 ms
+- latency over 20 runs: p50 125.5 ms, p95 137.7 ms
 - segment sizes: hibernating 19636, champions 14716, steady 12092, promising 4974, at_risk_high_value 4548, recent 4494
 - segmented customers total: 60460 == paying customers 60460 -> ok
 

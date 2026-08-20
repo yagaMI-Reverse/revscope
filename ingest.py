@@ -150,8 +150,13 @@ def apply_events(conn, lines):
                 r[0] += amount
                 r[2] += 1
                 stat(cid)[4] += 1
+            # currency/amount_local are read with [] and not .get(): a stream
+            # without them is a stale dataset, and booking every row as USD
+            # by default is the exact silent mistake this layer exists to
+            # prevent. Fail on the first page instead.
             charge_rows.append((o["id"], cid, o.get("subscription"), o["price"],
-                                product, amount, o["status"], code, dclass, dt))
+                                product, amount, o["currency"], o["amount_local"],
+                                o["status"], code, dclass, dt))
 
         elif etype == "charge.refunded":
             product = _product(o["price"])
@@ -161,7 +166,8 @@ def apply_events(conn, lines):
             r[2] += 1
             stat(o["customer"])[5] += o["amount"]
             refund_rows.append((o["id"], o["charge"], o["customer"], product,
-                                o["amount"], o["partial"], dt))
+                                o["amount"], o["currency"], o["amount_local"],
+                                o["partial"], dt))
 
     cur = conn.cursor()
     if cust_rows:
@@ -177,14 +183,15 @@ def apply_events(conn, lines):
     if charge_rows:
         cur.executemany(
             "INSERT INTO charges (id, customer_id, subscription_id, price_id, "
-            "product, amount_cents, status, decline_code, decline_class, created) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+            "product, amount_cents, currency, amount_local, status, "
+            "decline_code, decline_class, created) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
             "ON CONFLICT (id) DO NOTHING", charge_rows)
     if refund_rows:
         cur.executemany(
             "INSERT INTO refunds (id, charge_id, customer_id, product, "
-            "amount_cents, partial, created) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s) "
+            "amount_cents, currency, amount_local, partial, created) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) "
             "ON CONFLICT (id) DO NOTHING", refund_rows)
     if review_rows:
         cur.executemany(

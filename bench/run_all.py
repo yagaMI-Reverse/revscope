@@ -428,9 +428,11 @@ def bench_kill_resume(rd, tx):
 
 # ---------------------------------------------------------------- report
 
-def write_results(sections_by_num, meta):
-    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
-    lines = ["# revscope bench results", ""]
+def write_results(sections_by_num, meta, path=OUT_PATH,
+                  title="revscope bench results"):
+    """Shared with bench/run_product.py: one definition of the report format."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    lines = [f"# {title}", ""]
     lines += [f"- run at: {meta['ran_at']}",
               f"- postgres: {meta['pg']}",
               f"- python: {meta['py']}, psycopg {psycopg.__version__}",
@@ -448,7 +450,7 @@ def write_results(sections_by_num, meta):
                   f"**claim:** {s['claim']}", "", "**measured:**", ""]
         lines += [f"- {m}" for m in s["measured"]]
         lines += ["", f"**verdict:** {'PASS' if s['ok'] else 'FAIL'}", ""]
-    with open(OUT_PATH, "w", encoding="utf-8", newline="\n") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines))
 
 

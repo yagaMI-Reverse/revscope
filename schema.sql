@@ -57,7 +57,9 @@ CREATE TABLE charges (
     subscription_id TEXT,
     price_id        TEXT NOT NULL,
     product         TEXT NOT NULL,
-    amount_cents    INTEGER NOT NULL,
+    amount_cents    INTEGER NOT NULL,       -- USD list price, the internal ledger
+    currency        TEXT NOT NULL,          -- presentment currency of this charge
+    amount_local    BIGINT NOT NULL,        -- minor units actually presented
     status          TEXT NOT NULL,          -- succeeded | failed
     decline_code    TEXT,
     decline_class   TEXT,                   -- retryable | terminal | NULL
@@ -70,6 +72,8 @@ CREATE TABLE refunds (
     customer_id  TEXT NOT NULL,
     product      TEXT NOT NULL,
     amount_cents INTEGER NOT NULL,
+    currency     TEXT NOT NULL,
+    amount_local BIGINT NOT NULL,           -- settled on the refund day, not the charge day
     partial      BOOLEAN NOT NULL,
     created      TIMESTAMPTZ NOT NULL
 );

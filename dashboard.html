@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>revscope - product analytics</title>
+<style>
+/* Data-dense dashboard: tight grid, tabular figures, one accent.
+   No webfont, no CDN, no framework -- the page is served by the same stdlib
+   HTTP server that serves the marts, and it has to work with the network
+   cable pulled out. */
+:root {
+  --bg:#0d1117; --surface:#151b23; --surface-2:#1b232d; --border:#2a323d;
+  --fg:#e6edf3; --fg-muted:#9aa7b4; --fg-dim:#8592a3;
+  --hist:#58a6ff;            /* rate of the day  */
+  --now:#e3a008;             /* today's rate     */
+  --good:#3fb950; --bad:#f85149; --ring:#58a6ff;
+  /* heatmap ramp. The top of the ramp is picked so that the ink below
+     clears 4.5:1 against EVERY mix on it, not just against the ends --
+     a cell in the middle of the scale is still a cell someone reads. */
+  --cell-0:#131a22; --cell:#1e56b0; --cell-ink:#ffffff;
+  --r:6px; --gap:12px;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg:#f4f6f9; --surface:#ffffff; --surface-2:#f0f3f7; --border:#d5dce5;
+    --fg:#111823; --fg-muted:#4b5766; --fg-dim:#5b6878;
+    --hist:#1e40af; --now:#b45309; --good:#15803d; --bad:#b91c1c;
+    --cell-0:#eef2f7; --cell:#7ea3e8; --cell-ink:#111823;
+  }
+}
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; }
+body {
+  background:var(--bg); color:var(--fg);
+  font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  /* every number in this page is compared column to column: tabular figures
+     stop the columns from dancing when a digit changes */
+  font-variant-numeric:tabular-nums;
+}
+.num { font-family:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace; }
+header {
+  position:sticky; top:0; z-index:20; background:var(--surface);
+  border-bottom:1px solid var(--border); padding:10px 16px;
+  display:flex; flex-wrap:wrap; gap:var(--gap); align-items:flex-end;
+}
+.brand { font-weight:600; letter-spacing:.02em; margin-right:auto; }
+.brand span { color:var(--fg-dim); font-weight:400; margin-left:8px; font-size:12px; }
+.field { display:flex; flex-direction:column; gap:3px; }
+.field label { font-size:11px; color:var(--fg-muted); text-transform:uppercase;
+  letter-spacing:.06em; }
+select {
+  background:var(--surface-2); color:var(--fg); border:1px solid var(--border);
+  border-radius:var(--r); padding:7px 9px; font:inherit; min-height:36px;
+  cursor:pointer; transition:border-color .15s ease;
+}
+select:hover { border-color:var(--fg-dim); }
+select:focus-visible { outline:2px solid var(--ring); outline-offset:1px; }
+.lat { font-size:11px; color:var(--fg-dim); padding-bottom:9px; }
+.stale { margin:var(--gap) 16px 0; padding:9px 12px; border-radius:var(--r);
+  font-size:12.5px; background:color-mix(in srgb,var(--now) 16%,var(--surface));
+  border:1px solid var(--now); color:var(--fg); }
+.stale code { background:var(--surface-2); padding:1px 5px; border-radius:3px; }
+main { padding:var(--gap) 16px 40px; display:flex; flex-direction:column; gap:var(--gap); }
+.card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); padding:12px 14px; min-width:0;
+}
+.card h2 {
+  margin:0 0 2px; font-size:13px; font-weight:600; letter-spacing:.01em;
+  display:flex; align-items:center; gap:6px;
+}
+.card p.sub { margin:0 0 10px; font-size:11.5px; color:var(--fg-muted); }
+.kpis { display:grid; gap:var(--gap);
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+.kpi .k { font-size:11px; color:var(--fg-muted); text-transform:uppercase;
+  letter-spacing:.06em; }
+.kpi .v { font-size:21px; font-weight:600; margin-top:4px; }
+.kpi .n { font-size:11.5px; color:var(--fg-dim); margin-top:3px; }
+.cols { display:grid; gap:var(--gap); grid-template-columns:1.7fr 1fr; }
+@media (max-width:1000px) { .cols { grid-template-columns:1fr; } }
+table { width:100%; border-collapse:collapse; font-size:12.5px; }
+th,td { padding:5px 8px; text-align:right; white-space:nowrap; }
+th:first-child,td:first-child { text-align:left; }
+thead th { color:var(--fg-muted); font-weight:500; font-size:11px;
+  text-transform:uppercase; letter-spacing:.05em;
+  border-bottom:1px solid var(--border); }
+tbody tr:hover { background:var(--surface-2); }
+.pos { color:var(--good); } .neg { color:var(--bad); }
+.scroll { overflow-x:auto; }
+/* funnel */
+.stage { margin-bottom:9px; }
+.stage-top { display:flex; justify-content:space-between; gap:8px; font-size:12.5px; }
+.bar { height:9px; border-radius:3px; background:var(--hist); margin-top:4px;
+  transition:width .25s ease; }
+.stage.churn .bar { background:var(--fg-dim); }
+.drop { font-size:11px; color:var(--fg-muted); }
+.drop.worst { color:var(--now); font-weight:600; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px;
+  color:var(--fg-muted); margin-top:6px; }
+.legend i { display:inline-block; width:10px; height:10px; border-radius:2px;
+  margin-right:5px; vertical-align:-1px; }
+/* cohort heatmap */
+.heat { border-collapse:separate; border-spacing:2px; font-size:11px; }
+.heat th { font-weight:500; color:var(--fg-muted); font-size:10.5px;
+  border:0; padding:2px 4px; }
+.heat td { padding:0; }
+.heat .c { width:34px; height:20px; border-radius:3px; display:block;
+  text-align:center; line-height:20px; font-size:10px; color:var(--cell-ink); }
+.heat .c.empty { background:var(--cell-0); color:var(--fg-dim); }
+.heat tbody th { text-align:left; white-space:nowrap; }
+.muted { color:var(--fg-muted); }
+.foot { font-size:11.5px; color:var(--fg-dim); padding:0 2px; }
+.skel { background:var(--surface-2); border-radius:var(--r); height:64px;
+  animation:pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.55; } }
+@media (prefers-reduced-motion:reduce) {
+  * { animation:none !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">revscope <span id="asof">product analytics</span></div>
+  <div class="field">
+    <label for="f-country">Country</label>
+    <select id="f-country"><option value="ALL">All countries</option></select>
+  </div>
+  <div class="field">
+    <label for="f-from">Period from</label>
+    <select id="f-from"></select>
+  </div>
+  <div class="field">
+    <label for="f-to">Period to</label>
+    <select id="f-to"></select>
+  </div>
+  <div class="lat" id="lat" aria-live="polite"></div>
+</header>
+<div id="stale" class="stale" role="alert" hidden></div>
+
+<main>
+  <section class="kpis" id="kpis" aria-label="Key figures">
+    <div class="card skel"></div><div class="card skel"></div>
+    <div class="card skel"></div><div class="card skel"></div>
+    <div class="card skel"></div><div class="card skel"></div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <h2>Revenue by month, converted two ways</h2>
+      <p class="sub">Same local money. Blue converts every transaction at the
+        rate of its own day; amber converts all of it at today's rate.</p>
+      <div id="chart" class="scroll"></div>
+      <div class="legend">
+        <span><i style="background:var(--hist)"></i>at the rate of the day</span>
+        <span><i style="background:var(--now)"></i>at today's rate</span>
+        <span><i style="background:var(--fg-dim)"></i>refunds</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Funnel</h2>
+      <p class="sub">Customers with at least 90 days of history, so nobody is
+        counted as lost before they had time to pay again.</p>
+      <div id="funnel"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Revenue by country</h2>
+    <p class="sub">Reported in <span id="rc">USD</span>; "gap" is what the
+      report loses or gains by converting at today's rate instead.</p>
+    <div class="scroll"><table id="countries">
+      <thead><tr><th>Country</th><th>Cur</th><th>Charges</th>
+        <th>Local charged</th><th>At rate of day</th><th>At today's rate</th>
+        <th>Gap</th><th>Gap %</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>Cohort retention</h2>
+    <p class="sub">Rows are the month of a customer's first payment, columns
+      are 30-day periods after it. A cell is the share of that cohort that
+      paid in that period, counting only customers the period has fully
+      elapsed for; blank means not observable yet.</p>
+    <div class="scroll" id="cohorts"></div>
+    <p class="foot" id="cohort-foot"></p>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const fmtUsd = (c) => (c / 100).toLocaleString("en-US",
+  {style:"currency", currency:"USD", maximumFractionDigits:0});
+const fmtN = (n) => n.toLocaleString("en-US");
+const pct = (x) => (x === null || x === undefined) ? "-" : x.toFixed(1) + "%";
+const signed = (x) => (x > 0 ? "+" : "") + x.toFixed(2) + "%";
+
+let META = null;
+
+function params() {
+  const p = new URLSearchParams();
+  const c = $("#f-country").value, a = $("#f-from").value, b = $("#f-to").value;
+  if (c && c !== "ALL") p.set("country", c);
+  if (a) p.set("from", a);
+  if (b) p.set("to", b);
+  return p.toString();
+}
+
+async function api(path) {
+  const r = await fetch(path + (params() ? "?" + params() : ""));
+  if (!r.ok) throw new Error(path + " -> " + r.status);
+  return r.json();
+}
+
+function months() {
+  const out = [], [y0, m0] = META.month_min.split("-").map(Number);
+  const [y1, m1] = META.month_max.split("-").map(Number);
+  let y = y0, m = m0;
+  while (y < y1 || (y === y1 && m <= m1)) {
+    out.push(`${y}-${String(m).padStart(2, "0")}-01`);
+    if (++m === 13) { m = 1; y++; }
+  }
+  return out;
+}
+
+function fillFilters() {
+  const cs = $("#f-country");
+  META.countries.forEach((c) => {
+    const o = document.createElement("option");
+    o.value = c.code; o.textContent = `${c.code} (${c.currency.toUpperCase()})`;
+    cs.appendChild(o);
+  });
+  const ms = months();
+  for (const [sel, list, def] of [[$("#f-from"), ms, ms[0]],
+                                  [$("#f-to"), ms, ms[ms.length - 1]]]) {
+    list.forEach((m) => {
+      const o = document.createElement("option");
+      o.value = m; o.textContent = m.slice(0, 7); sel.appendChild(o);
+    });
+    sel.value = def;
+  }
+  $("#asof").textContent = `as of ${META.asof} - reported in ${META.reporting_currency}`;
+  $("#rc").textContent = META.reporting_currency;
+}
+
+/* ---- KPI row ---- */
+function renderKpis(s) {
+  const r12 = s.retention["11"], r2 = s.retention["1"];
+  const tiles = [
+    ["Gross, rate of the day", fmtUsd(s.gross_hist),
+     `${fmtN(s.tx)} charges in ${s.countries} countries`],
+    ["Gross, today's rate", fmtUsd(s.gross_current),
+     `<span class="${s.fx_gap_cents < 0 ? "neg" : "pos"}">${signed(s.fx_gap_pct)}
+      = ${fmtUsd(s.fx_gap_cents)}</span> against the ledger`],
+    ["Net of refunds", fmtUsd(s.net_hist), `refunds ${fmtUsd(s.refund_hist)}`],
+    ["Retention, 2nd month", r2 ? pct(r2.pct) : "-",
+     r2 ? `${fmtN(r2.retained)} of ${fmtN(r2.eligible)} eligible` : "no data"],
+    ["Retention, 12th month", r12 ? pct(r12.pct) : "-",
+     r12 ? `${fmtN(r12.retained)} of ${fmtN(r12.eligible)} eligible` : "no data"],
+    ["Worst funnel step", s.worst_drop_pct ? "-" + pct(s.worst_drop_pct) : "-",
+     s.worst_stage ? "at " + s.worst_stage.replace(/_/g, " ") : "no data"],
+  ];
+  $("#kpis").innerHTML = tiles.map(([k, v, n]) =>
+    `<div class="card kpi"><div class="k">${k}</div>
+     <div class="v num">${v}</div><div class="n">${n}</div></div>`).join("");
+}
+
+/* ---- monthly revenue: two lines over a refund baseline ---- */
+function renderChart(rows) {
+  const box = $("#chart");
+  if (!rows.length) { box.innerHTML = '<p class="muted">No months in range.</p>'; return; }
+  const W = Math.max(640, rows.length * 15), H = 240,
+        L = 62, R = 12, T = 12, B = 26;
+  const max = Math.max(...rows.map((r) => Math.max(r.gross_hist, r.gross_current))) || 1;
+  const x = (i) => L + (rows.length === 1 ? (W - L - R) / 2
+                        : i * (W - L - R) / (rows.length - 1));
+  const y = (v) => T + (H - T - B) * (1 - v / max);
+  const path = (k) => rows.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(r[k]).toFixed(1)}`).join("");
+  const ticks = [0, .25, .5, .75, 1].map((f) => {
+    const v = max * f;
+    return `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"
+             stroke="var(--border)" stroke-width="1"/>
+            <text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="10"
+             fill="var(--fg-dim)">${(v / 100000).toFixed(0)}k</text>`;
+  }).join("");
+  const step = Math.ceil(rows.length / 12);
+  const xlabels = rows.map((r, i) => i % step ? "" :
+    `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="10"
+      fill="var(--fg-dim)">${r.month.slice(2, 7)}</text>`).join("");
+  const dots = rows.map((r, i) => {
+    const gap = r.gross_current - r.gross_hist;
+    const g = r.gross_hist ? (gap / r.gross_hist * 100).toFixed(2) : "0.00";
+    return `<circle cx="${x(i)}" cy="${y(r.gross_hist)}" r="7" fill="transparent">
+      <title>${r.month.slice(0, 7)}
+at the rate of the day: ${fmtUsd(r.gross_hist)}
+at today's rate: ${fmtUsd(r.gross_current)} (${g > 0 ? "+" : ""}${g}%)
+charges: ${fmtN(r.tx)}</title></circle>`;
+  }).join("");
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"
+     role="img" aria-label="Monthly revenue converted at the rate of each
+     transaction day versus at today's rate">
+    ${ticks}
+    <text x="${L - 8}" y="${T}" text-anchor="end" font-size="9"
+      fill="var(--fg-dim)">USD</text>
+    <path d="${path("refund_hist")}" fill="none" stroke="var(--fg-dim)"
+      stroke-width="1" stroke-dasharray="3 3"/>
+    <path d="${path("gross_current")}" fill="none" stroke="var(--now)" stroke-width="1.6"/>
+    <path d="${path("gross_hist")}" fill="none" stroke="var(--hist)" stroke-width="2"/>
+    ${xlabels}${dots}
+  </svg>`;
+}
+
+/* ---- funnel ---- */
+function renderFunnel(f) {
+  const top = f.stages.find((s) => s.kind === "funnel");
+  const base = top ? top.customers : 1;
+  $("#funnel").innerHTML = f.stages.map((s) => {
+    const w = base ? Math.max(1, s.customers / base * 100) : 0;
+    const worst = s.stage === f.worst_stage;
+    const drop = s.kind === "funnel" && s.drop_pct
+      ? `<span class="drop ${worst ? "worst" : ""}">-${s.drop_pct.toFixed(1)}%${worst ? " worst" : ""}</span>`
+      : `<span class="drop">${(s.customers / base * 100).toFixed(1)}% of base</span>`;
+    return `<div class="stage ${s.kind}">
+      <div class="stage-top"><span>${s.label}</span>
+        <span class="num">${fmtN(s.customers)} ${drop}</span></div>
+      <div class="bar" style="width:${w}%"></div></div>`;
+  }).join("");
+}
+
+/* ---- by country ---- */
+function renderCountries(rows) {
+  const tb = $("#countries tbody");
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8" class="muted">No data in range.</td></tr>'; return; }
+  tb.innerHTML = rows.map((r) => {
+    const gap = r.gross_current - r.gross_hist;
+    const p = r.gross_hist ? gap / r.gross_hist * 100 : 0;
+    const cls = gap < 0 ? "neg" : (gap > 0 ? "pos" : "muted");
+    return `<tr><td>${r.country}</td><td>${r.currency.toUpperCase()}</td>
+      <td class="num">${fmtN(r.tx)}</td>
+      <td class="num">${fmtN(Math.round(r.gross_local / 100))}</td>
+      <td class="num">${fmtUsd(r.gross_hist)}</td>
+      <td class="num">${fmtUsd(r.gross_current)}</td>
+      <td class="num ${cls}">${fmtUsd(gap)}</td>
+      <td class="num ${cls}">${signed(p)}</td></tr>`;
+  }).join("");
+}
+
+/* ---- cohort heatmap ---- */
+function renderCohorts(rows) {
+  const box = $("#cohorts");
+  if (!rows.length) { box.innerHTML = '<p class="muted">No cohorts in range.</p>'; return; }
+  const P = 13;
+  const head = `<tr><th>Cohort</th><th>Size</th>` +
+    Array.from({length: P}, (_, i) => `<th>P${i}</th>`).join("") + `</tr>`;
+  const body = rows.map((c) => {
+    const cells = Array.from({length: P}, (_, i) => {
+      const d = c.periods[i];
+      if (!d || !d.eligible) {
+        return `<td><span class="c empty" title="${c.cohort} P${i}: not observable yet">-</span></td>`;
+      }
+      const v = d.retained / d.eligible;
+      // one hue, mix ratio carries the value: a single-hue ramp stays readable
+      // for colour-blind users, and every cell also states its own number
+      return `<td><span class="c" style="background:color-mix(in srgb,var(--cell) ${(v * 100).toFixed(0)}%,var(--cell-0))"
+        title="${c.cohort} period ${i}: ${d.retained} of ${d.eligible} eligible paid (${(v * 100).toFixed(1)}%), survived ${d.survived}, revenue ${fmtUsd(d.revenue)}"
+        >${(v * 100).toFixed(0)}</span></td>`;
+    }).join("");
+    return `<tr><th>${c.cohort.slice(0, 7)}</th><td class="num">${fmtN(c.size)}</td>${cells}</tr>`;
+  }).join("");
+  box.innerHTML = `<table class="heat" aria-label="Cohort retention, percent of eligible customers paying in each 30-day period">
+    <thead>${head}</thead><tbody>${body}</tbody></table>`;
+  const tot = rows.reduce((a, c) => a + c.size, 0);
+  $("#cohort-foot").textContent =
+    `${rows.length} cohorts, ${fmtN(tot)} customers. Numbers in cells are percent retained; hover a cell for the exact counts.`;
+}
+
+/* ---- load ---- */
+let inflight = 0;
+async function refresh() {
+  const my = ++inflight;
+  $("#lat").textContent = "loading...";
+  const t0 = performance.now();
+  try {
+    const [s, r, f, c] = await Promise.all([
+      api("/api/summary"), api("/api/revenue"), api("/api/funnel"), api("/api/cohorts"),
+    ]);
+    if (my !== inflight) return;         // a newer filter change already won
+    renderKpis(s.data);
+    renderChart(r.data.by_month);
+    renderCountries(r.data.by_country);
+    renderFunnel(f.data);
+    renderCohorts(c.data);
+    const sql = s.query_ms + r.query_ms + f.query_ms + c.query_ms;
+    $("#lat").textContent =
+      `4 mart queries ${sql.toFixed(1)} ms - round trip ${(performance.now() - t0).toFixed(0)} ms`;
+  } catch (e) {
+    $("#lat").textContent = "failed: " + e.message;
+    $("#kpis").innerHTML = `<div class="card"><div class="k">Error</div>
+      <div class="n">${e.message}. Is <code>python product.py build</code> done?</div></div>`;
+  }
+}
+
+(async function init() {
+  try {
+    META = await (await fetch("/api/meta")).json();
+  } catch (e) {
+    $("#lat").textContent = "cannot reach the API: " + e.message;
+    return;
+  }
+  if (META.stale) {
+    const el = $("#stale");
+    el.hidden = false;
+    el.innerHTML = `The marts hold ${fmtN(META.charges_in_marts)} charges but
+      the database has ${fmtN(META.charges_in_db)}. Numbers below are from an
+      older ingest &mdash; run <code>python product.py build</code>.`;
+  }
+  fillFilters();
+  ["#f-country", "#f-from", "#f-to"].forEach((s) =>
+    $(s).addEventListener("change", refresh));
+  refresh();
+})();
+</script>
+</body>
+</html>
